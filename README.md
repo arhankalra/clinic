@@ -1,7 +1,7 @@
 # Clinical Trials Mini‑App (Flask + HTML/CSS)
 
 
-A tiny end‑to‑end app: browse/ filter trials, view details, and save favorites (SQLite). Frontend is plain HTML/CSS plus a minimal JS file for the swipe view.
+A tiny web app in progress: browse, filter trials, view details, and save favorites. Frontend at the moment is plain HTML/CSS and simple JS file.
 
 
 ## Quickstart
@@ -9,6 +9,6 @@ A tiny end‑to‑end app: browse/ filter trials, view details, and save favorit
 
 ```bash
 python -m venv .venv
-source .venv/bin/activate # Windows: .venv\Scripts\activate
+source .venv/bin/activate
 pip install -r requirements.txt
 python app.py

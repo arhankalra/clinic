@@ -5,7 +5,7 @@ from db import get_db, init_db
 from models import Trial, load_trials
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'dev-secret-key'  # replace in production
+app.config['SECRET_KEY'] = 'dev-secret-key'  # replace latah
 app.config['TRIALS_JSON'] = str(Path(__file__).parent / 'data' / 'trials.sample.json')
 app.config['DB_PATH'] = str(Path(__file__).parent / 'app.db')
 
