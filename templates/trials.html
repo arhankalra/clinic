@@ -1,0 +1,39 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>Browse Trials</h2>
+<form class="filters" method="get">
+<input type="text" name="q" placeholder="Search title or summary" value="{{ query.q }}" />
+<input type="text" name="condition" placeholder="Condition (e.g., melanoma)" value="{{ query.condition }}" />
+<select name="phase">
+<option value="">Any Phase</option>
+{% for p in ['N/A','Phase 1','Phase 2','Phase 3','Phase 4'] %}
+<option value="{{ p }}" {% if query.phase == p %}selected{% endif %}>{{ p }}</option>
+{% endfor %}
+</select>
+<select name="status">
+<option value="">Any Status</option>
+{% for s in ['Recruiting','Active, not recruiting','Completed'] %}
+<option value="{{ s }}" {% if query.status == s %}selected{% endif %}>{{ s }}</option>
+{% endfor %}
+</select>
+<input type="text" name="location" placeholder="City/State/Country" value="{{ query.location }}" />
+<button class="btn" type="submit">Apply</button>
+</form>
+<p class="muted">{{ count }} result{{ '' if count == 1 else 's' }}</p>
+
+
+<div class="grid">
+{% for t in trials %}
+<article class="card">
+<h3><a href="{{ url_for('trial_detail', nctid=t.nctid) }}">{{ t.title }}</a></h3>
+<p class="muted">{{ t.condition }} · {{ t.phase }} · {{ t.status }}</p>
+<p>{{ t.city }}, {{ t.state }}, {{ t.country }}</p>
+<form action="{{ url_for('toggle_favorite', nctid=t.nctid) }}" method="post">
+<button class="btn small" type="submit">☆ Favorite</button>
+</form>
+</article>
+{% else %}
+<p>No trials matched your filters.</p>
+{% endfor %}
+</div>
+{% endblock %}

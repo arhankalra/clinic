@@ -1,0 +1,18 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>Your Favorites</h2>
+<div class="grid">
+{% for t in trials %}
+<article class="card">
+<h3><a href="{{ url_for('trial_detail', nctid=t.nctid) }}">{{ t.title }}</a></h3>
+<p class="muted">{{ t.condition }} · {{ t.phase }} · {{ t.status }}</p>
+<p>{{ t.city }}, {{ t.state }}, {{ t.country }}</p>
+<form action="{{ url_for('toggle_favorite', nctid=t.nctid) }}" method="post">
+<button class="btn small" type="submit">★ Remove</button>
+</form>
+</article>
+{% else %}
+<p>No favorites yet.</p>
+{% endfor %}
+</div>
+{% endblock %}

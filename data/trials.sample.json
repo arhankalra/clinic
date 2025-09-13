@@ -1,0 +1,57 @@
+[
+{
+"nctid": "NCT00000001",
+"title": "A Study of Drug X in Type 2 Diabetes",
+"condition": "Type 2 Diabetes",
+"phase": "Phase 3",
+"status": "Recruiting",
+"city": "Ann Arbor",
+"state": "MI",
+"country": "USA",
+"summary": "Evaluating efficacy and safety of Drug X versus placebo in adults with T2D."
+},
+{
+"nctid": "NCT00000002",
+"title": "Immunotherapy for Melanoma",
+"condition": "Melanoma",
+"phase": "Phase 2",
+"status": "Active, not recruiting",
+"city": "Chicago",
+"state": "IL",
+"country": "USA",
+"summary": "Assessing response rates of checkpoint inhibitor in metastatic melanoma."
+},
+{
+"nctid": "NCT00000003",
+"title": "Lifestyle Intervention for Hypertension",
+"condition": "Hypertension",
+"phase": "N/A",
+"status": "Recruiting",
+"city": "San Francisco",
+"state": "CA",
+"country": "USA",
+"summary": "Randomized study comparing diet and exercise counseling versus usual care."
+},
+{
+"nctid": "NCT00000004",
+"title": "Pediatric Asthma Inhaler Trial",
+"condition": "Asthma",
+"phase": "Phase 4",
+"status": "Completed",
+"city": "Boston",
+"state": "MA",
+"country": "USA",
+"summary": "Post-marketing surveillance of a new inhaled corticosteroid in children."
+},
+{
+"nctid": "NCT00000005",
+"title": "COVID-19 Booster Immunogenicity",
+"condition": "COVID-19",
+"phase": "Phase 3",
+"status": "Recruiting",
+"city": "New York",
+"state": "NY",
+"country": "USA",
+"summary": "Comparing immune response across booster formulations in adults."
+}
+]

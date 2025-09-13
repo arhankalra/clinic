@@ -1,0 +1,20 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>Swipe Mode</h2>
+<p class="muted">Like (★) to save, or skip (→) to see the next trial.</p>
+<div id="deck" class="deck" data-add-fav-url="{{ url_for('toggle_favorite', nctid='__NCTID__') }}">
+{% for t in trials %}
+<div class="card swipe" data-nctid="{{ t.nctid }}">
+<h3>{{ t.title }}</h3>
+<p class="muted">{{ t.condition }} · {{ t.phase }} · {{ t.status }}</p>
+<p>{{ t.city }}, {{ t.state }}, {{ t.country }}</p>
+<p>{{ t.summary }}</p>
+<div class="row">
+<a class="btn outline" href="{{ url_for('trial_detail', nctid=t.nctid) }}">Details</a>
+<button class="btn small" data-like>★ Like</button>
+<button class="btn small" data-skip>→ Skip</button>
+</div>
+</div>
+{% endfor %}
+</div>
+{% endblock %}

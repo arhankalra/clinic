@@ -1,0 +1,19 @@
+{% extends 'base.html' %}
+{% block content %}
+<a class="muted" href="{{ url_for('trials') }}">← Back to results</a>
+<article class="detail">
+<header>
+<h2>{{ t.title }}</h2>
+<p class="muted">{{ t.nctid }}</p>
+<p class="muted">{{ t.condition }} · {{ t.phase }} · {{ t.status }}</p>
+<p>{{ t.city }}, {{ t.state }}, {{ t.country }}</p>
+<form action="{{ url_for('toggle_favorite', nctid=t.nctid) }}" method="post">
+<button class="btn" type="submit">{{ '★ Remove Favorite' if is_favorite else '☆ Add Favorite' }}</button>
+</form>
+</header>
+<section>
+<h3>Summary</h3>
+<p>{{ t.summary }}</p>
+</section>
+</article>
+{% endblock %}
