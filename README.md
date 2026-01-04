@@ -1,7 +1,7 @@
 # Clinical Trials Mini‑App (Flask + HTML/CSS)
 
 
-A tiny web app in progress: browse, filter trials, view details, and save favorites. Frontend at the moment is plain HTML/CSS and simple JS file.
+A tiny web app in progress: browse, filter trials, view details, and save favorites. Frontend is something I will be working on soon.
 
 
 ## Quickstart
