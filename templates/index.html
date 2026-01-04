@@ -1,11 +1,13 @@
 {% extends 'base.html' %}
 {% block content %}
 <section class="hero">
-<h1>Find clinical trials that fit you.</h1>
-<p class="muted">Filter by condition, phase, status, and location. Save favorites and review later.</p>
-<div class="actions">
-<a class="btn" href="{{ url_for('trials') }}">Browse Trials</a>
-<a class="btn outline" href="{{ url_for('swipe') }}">Try Swipe Mode</a>
-</div>
+  <h1>Find clinical trials that fit you.</h1>
+  <p class="muted">
+    Filter by condition, phase, status, and location. Save favorites and review later.
+  </p>
+  <div class="actions">
+    <a class="btn" href="{{ url_for('trials') }}">Browse Trials</a>
+    <a class="btn outline" href="{{ url_for('swipe') }}">Try Swipe Mode</a>
+  </div>
 </section>
 {% endblock %}

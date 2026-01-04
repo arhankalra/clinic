@@ -1,0 +1,11 @@
+<h2>My Profile</h2>
+
+<form method="POST">
+  <input name="age" placeholder="Age" value="{{ profile.age if profile }}" />
+  <input name="condition" placeholder="Condition" value="{{ profile.condition if profile }}" />
+  <input name="city" placeholder="City" value="{{ profile.city if profile }}" />
+  <input name="state" placeholder="State" value="{{ profile.state if profile }}" />
+  <input name="country" placeholder="Country" value="{{ profile.country if profile }}" />
+
+  <button type="submit">Save</button>
+</form>

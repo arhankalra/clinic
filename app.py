@@ -1,98 +1,238 @@
-from flask import Flask, render_template, request, redirect, url_for, session, flash
+from flask import Flask, render_template, request, redirect, url_for, flash
+from flask_login import current_user, login_required
 from pathlib import Path
-import json
-from db import get_db, init_db
-from models import Trial, load_trials
+from extensions import db, migrate, login_manager, bcrypt
+from models import User, Favorite, ClinicalTrial
+from models import UserProfile
+from sqlalchemy import case, or_
 
+
+# --------------------
+# App setup
+# --------------------
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'dev-secret-key'  # replace latah
-app.config['TRIALS_JSON'] = str(Path(__file__).parent / 'data' / 'trials.sample.json')
-app.config['DB_PATH'] = str(Path(__file__).parent / 'app.db')
 
-with app.app_context():
-    init_db(app.config['DB_PATH'])
+app.config["SECRET_KEY"] = "dev-secret-key"  # replace later
+app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///app.db"
+app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+app.config["DB_PATH"] = str(Path(__file__).parent / "app.db")
 
-@app.before_request
-def ensure_user():
-    if 'username' not in session:
-        session['username'] = 'demo'
 
-TRIALS = load_trials(app.config['TRIALS_JSON'])
-TRIALS_BY_ID = {t.nctid: t for t in TRIALS}
+# --------------------
+# Initialize extensions
+# --------------------
+db.init_app(app)
+migrate.init_app(app, db)
+login_manager.init_app(app)
+bcrypt.init_app(app)
 
-@app.route('/')
+login_manager.login_view = "auth.login"
+
+
+@login_manager.user_loader
+def load_user(user_id):
+    return User.query.get(int(user_id))
+
+
+# Routes
+@app.route("/")
 def index():
-    return render_template('index.html')
+    return render_template("index.html")
 
-@app.route('/trials')
+
+# Profile
+@app.route("/profile", methods=["GET", "POST"])
+@login_required
+def profile():
+    profile = UserProfile.query.filter_by(user_id=current_user.id).first()
+
+    if request.method == "POST":
+        if not profile:
+            profile = UserProfile(user_id=current_user.id)
+            db.session.add(profile)
+
+        profile.age = request.form.get("age")
+        profile.condition = request.form.get("condition")
+        profile.city = request.form.get("city")
+        profile.state = request.form.get("state")
+        profile.country = request.form.get("country")
+
+        db.session.commit()
+        flash("Profile updated", "success")
+        return redirect(url_for("profile"))
+
+    return render_template("profile.html", profile=profile)
+
+
+# Trials search (DB-backed)
+@app.route("/trials")
 def trials():
-    q = (request.args.get('q') or '').strip().lower()
-    condition = (request.args.get('condition') or '').strip().lower()
-    phase = (request.args.get('phase') or '').strip()
-    status = (request.args.get('status') or '').strip()
-    location = (request.args.get('location') or '').strip().lower()
+    q = request.args.get("q", "").strip().lower()
+    condition = request.args.get("condition", "").strip().lower()
+    phase = request.args.get("phase", "").strip()
+    status = request.args.get("status", "").strip()
+    location = request.args.get("location", "").strip().lower()
 
-    filtered = []
-    for t in TRIALS:
-        if q and (q not in t.title.lower() and q not in t.summary.lower()):
-            continue
-        if condition and condition not in t.condition.lower():
-            continue
-        if phase and phase != t.phase:
-            continue
-        if status and status != t.status:
-            continue
-        if location and (location not in t.city.lower() and location not in t.state.lower() and location not in t.country.lower()):
-            continue
-        filtered.append(t)
+    if not condition and current_user.is_authenticated and current_user.profile:
+        if current_user.profile.condition:
+            condition = current_user.profile.condition.lower()
 
-    filtered.sort(key=lambda x: x.title)
+    query = ClinicalTrial.query
 
-    return render_template('trials.html', trials=filtered, count=len(filtered), query={
-        'q': q, 'condition': condition, 'phase': phase, 'status': status, 'location': location
-    })
+    if q:
+        query = query.filter(
+            (ClinicalTrial.title.ilike(f"%{q}%")) |
+            (ClinicalTrial.summary.ilike(f"%{q}%"))
+        )
 
-@app.route('/trial/<nctid>')
+    if condition:
+        query = query.filter(ClinicalTrial.condition.ilike(f"%{condition}%"))
+
+    if phase:
+        query = query.filter_by(phase=phase)
+
+    if status:
+        query = query.filter_by(status=status)
+
+    if location:
+        query = query.filter(
+            (ClinicalTrial.city.ilike(f"%{location}%")) |
+            (ClinicalTrial.state.ilike(f"%{location}%")) |
+            (ClinicalTrial.country.ilike(f"%{location}%"))
+        )
+
+    # ranking logic
+    score = case((True, 0))
+
+    # condition relevance
+    if condition:
+        score += case(
+            (ClinicalTrial.condition.ilike(f"%{condition}%"), 3),
+            else_=0
+        )
+
+    # recruiting first
+    score += case(
+        (ClinicalTrial.status.ilike("%recruit%"), 2),
+        else_=0
+    )
+
+    # phase preference
+    score += case(
+        (ClinicalTrial.phase.in_(["Phase 2", "Phase II", "Phase 3", "Phase III"]), 1),
+        else_=0
+    )
+
+    # location relevance
+    if location:
+        score += case(
+            (
+                or_(
+                    ClinicalTrial.city.ilike(f"%{location}%"),
+                    ClinicalTrial.state.ilike(f"%{location}%"),
+                    ClinicalTrial.country.ilike(f"%{location}%"),
+                ),
+                1
+            ),
+            else_=0
+        )
+
+    results = query.add_columns(score.label("score")) \
+                .order_by(score.desc(), ClinicalTrial.title.asc()) \
+                .all()
+
+    # unpack rows (SQLAlchemy returns tuples)
+    results = [row[0] for row in results]
+
+
+    return render_template(
+    "trials.html",
+    trials=results,
+    count=len(results),
+    query={
+        "q": q,
+        "condition": condition,
+        "phase": phase,
+        "status": status,
+        "location": location
+    }
+)
+
+
+
+# Trial detail
+@app.route("/trial/<nctid>")
 def trial_detail(nctid):
-    t = TRIALS_BY_ID.get(nctid)
+    t = ClinicalTrial.query.filter_by(nctid=nctid).first()
     if not t:
-        flash('Trial not found.', 'error')
-        return redirect(url_for('trials'))
-    db = get_db()
-    row = db.execute('SELECT 1 FROM favorites WHERE username=? AND nctid=?', (session['username'], nctid)).fetchone()
-    is_favorite = bool(row)
-    return render_template('trial_detail.html', t=t, is_favorite=is_favorite)
+        flash("Trial not found.", "error")
+        return redirect(url_for("trials"))
 
-@app.route('/favorite/<nctid>', methods=['POST'])
+    is_favorite = False
+    if current_user.is_authenticated:
+        is_favorite = Favorite.query.filter_by(
+            user_id=current_user.id,
+            nctid=nctid
+        ).first() is not None
+
+    return render_template("trial_detail.html", t=t, is_favorite=is_favorite)
+
+
+# Toggle favorite
+@app.route("/favorite/<nctid>", methods=["POST"])
+@login_required
 def toggle_favorite(nctid):
-    t = TRIALS_BY_ID.get(nctid)
+    t = ClinicalTrial.query.filter_by(nctid=nctid).first()
     if not t:
-        flash('Trial not found.', 'error')
-        return redirect(url_for('trials'))
-    db = get_db()
-    row = db.execute('SELECT 1 FROM favorites WHERE username=? AND nctid=?', (session['username'], nctid)).fetchone()
-    if row:
-        db.execute('DELETE FROM favorites WHERE username=? AND nctid=?', (session['username'], nctid))
-        db.commit()
-        flash('Removed from favorites.', 'info')
+        flash("Trial not found.", "error")
+        return redirect(url_for("trials"))
+
+    fav = Favorite.query.filter_by(
+        user_id=current_user.id,
+        nctid=nctid
+    ).first()
+
+    if fav:
+        db.session.delete(fav)
+        db.session.commit()
+        flash("Removed from favorites.", "info")
     else:
-        db.execute('INSERT INTO favorites(username, nctid) VALUES(?, ?)', (session['username'], nctid))
-        db.commit()
-        flash('Added to favorites!', 'success')
-    return redirect(request.referrer or url_for('trial_detail', nctid=nctid))
+        db.session.add(Favorite(
+            user_id=current_user.id,
+            nctid=nctid
+        ))
+        db.session.commit()
+        flash("Added to favorites!", "success")
 
-@app.route('/favorites')
+    return redirect(request.referrer or url_for("trial_detail", nctid=nctid))
+
+
+# Favorites page
+@app.route("/favorites")
+@login_required
 def favorites():
-    db = get_db()
-    rows = db.execute('SELECT nctid FROM favorites WHERE username=?', (session['username'],)).fetchall()
-    fav_ids = {r['nctid'] for r in rows}
-    fav_trials = [TRIALS_BY_ID[n] for n in fav_ids if n in TRIALS_BY_ID]
-    fav_trials.sort(key=lambda x: x.title)
-    return render_template('favorites.html', trials=fav_trials)
+    favs = Favorite.query.filter_by(user_id=current_user.id).all()
+    fav_ids = {f.nctid for f in favs}
 
-@app.route('/swipe')
+    trials = ClinicalTrial.query.filter(
+        ClinicalTrial.nctid.in_(fav_ids)
+    ).order_by(ClinicalTrial.title).all()
+
+    return render_template("favorites.html", trials=trials)
+
+
+# Swipe mode (protected)
+@app.route("/swipe")
+@login_required
 def swipe():
-    return render_template('swipe.html', trials=TRIALS)
+    trials = ClinicalTrial.query.order_by(ClinicalTrial.title).all()
+    return render_template("swipe.html", trials=trials)
 
-if __name__ == '__main__':
+
+# Auth blueprint
+from routes.auth import auth
+app.register_blueprint(auth)
+
+
+if __name__ == "__main__":
     app.run(debug=True)
